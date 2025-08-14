@@ -178,12 +178,17 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', () => {
         // compute candidate model paths and try sequentially
         const s = slug(region);
-        const candidates = [
-          `models/${selectedGender}/${s}.glb`,
-          `models/${s}_${selectedGender}.glb`,
-          `outfits/${s}_${selectedGender}.glb`,
-          `models/${s}.glb` // last attempt
-        ];
+        const sLower = s.toLowerCase();
+        console.log("DEBUG: s =", s, "selectedGender =", selectedGender);
+
+
+const candidates = [
+    `models/${selectedGender}/${sLower}.glb`,
+    `models/${sLower}_${selectedGender}.glb`,
+    `models/outfits/${sLower}_${selectedGender}.glb`,
+    `models/${sLower}.glb`
+];
+
         hudTitle.textContent = `${region} — ${info.name}`;
         hudDesc.textContent = info.desc;
         tryLoadPathsSequential(candidates)
@@ -451,47 +456,144 @@ document.addEventListener('DOMContentLoaded', () => {
 }); // end
 
 
-const loader = new THREE.GLTFLoader();
-let scene, camera, renderer, controls, mannequin;
 
-function init3D() {
-    const canvas = document.getElementById('c3d');
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
 
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+document.addEventListener('DOMContentLoaded', function () {
+    // DOM elements
+    const canvas = document.getElementById('modelCanvas');
+    const hudTitle = document.getElementById('hudTitle');
+    const hudDesc = document.getElementById('hudDesc');
 
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1.5, 3);
+    // Three.js core
+    let scene, camera, renderer, controls, mannequin, currentOutfit;
+    const loader = new THREE.GLTFLoader();
 
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    function init3D() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xeeeeee);
 
-    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    scene.add(light);
+        // Camera
+        camera = new THREE.PerspectiveCamera(
+            45,
+            canvas.clientWidth / canvas.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 1.6, 3);
 
-    animate();
-}
+        // Renderer
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-}
+        // Controls
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1.6, 0);
+        controls.update();
 
-function loadMannequin(gender) {
-    loader.load(`models/mannequins/${gender}.glb`, (gltf) => {
-        if (mannequin) scene.remove(mannequin);
-        mannequin = gltf.scene;
-        scene.add(mannequin);
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Ground
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(10, 10),
+            new THREE.MeshPhongMaterial({ color: 0x999999, depthWrite: true })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Resize handler
+        window.addEventListener('resize', onWindowResize);
+
+        animate();
+    }
+
+    function onWindowResize() {
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    }
+
+    // Load mannequin (.glb)
+    function loadMannequin() {
+        loader.load(
+            '/models/mannequin.glb',
+            function (gltf) {
+                mannequin = gltf.scene;
+                mannequin.position.set(0, 0, 0);
+                mannequin.traverse(obj => {
+                    if (obj.isMesh) {
+                        obj.castShadow = true;
+                    }
+                });
+                scene.add(mannequin);
+            },
+            undefined,
+            function (error) {
+                console.error('Error loading mannequin:', error);
+            }
+        );
+    }
+
+    // Load outfit (.glb) — remove old before adding new
+    function loadOutfit(url, title, desc) {
+        if (currentOutfit) {
+            scene.remove(currentOutfit);
+            currentOutfit.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) {
+                        obj.material.forEach(mat => mat.dispose());
+                    } else {
+                        obj.material.dispose();
+                    }
+                }
+            });
+            currentOutfit = null;
+        }
+
+        loader.load(
+            url,
+            function (gltf) {
+                currentOutfit = gltf.scene;
+                currentOutfit.position.set(0, 0, 0);
+                scene.add(currentOutfit);
+
+                hudTitle.textContent = title;
+                hudDesc.textContent = desc;
+            },
+            undefined,
+            function (error) {
+                console.error('Error loading outfit:', error);
+            }
+        );
+    }
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+
+    // Outfit click event
+    document.querySelectorAll('.outfit').forEach(el => {
+        el.addEventListener('click', () => {
+            const modelUrl = el.getAttribute('data-model'); // .glb path
+            const title = el.getAttribute('data-title') || 'Outfit';
+            const desc = el.getAttribute('data-desc') || '';
+            loadOutfit(modelUrl, title, desc);
+        });
     });
-}
 
-function loadOutfit(outfitName) {
-    loader.load(`models/outfits/${outfitName}.glb`, (gltf) => {
-        mannequin.add(gltf.scene); // attach to mannequin
-    });
-}
+    // Initialize scene and mannequin
+    init3D();
+    loadMannequin();
+});
+// End of script.js
 
-init3D();
