@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Attirra — Dress the Heritage (3D)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Three.js and helpers (CDN) -->
+  <script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.1/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.160.1/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Attirra — Dress the Heritage</div>
+  </header>
+
+  <main class="container">
+    <!-- Welcome -->
+    <section id="welcome" class="panel active">
+      <h1>Welcome to Attirra</h1>
+      <p>Explore India's traditional outfits in 3D. Click <strong>Got it</strong> to begin.</p>
+      <button id="gotIt" class="primary">Got it</button>
+    </section>
+
+    <!-- Gender select -->
+    <section id="gender" class="panel">
+      <h2>Select Gender</h2>
+      <div class="btn-row">
+        <button class="gender-btn" data-gender="male">Male</button>
+        <button class="gender-btn" data-gender="female">Female</button>
+      </div>
+    </section>
+
+    <!-- Region select -->
+    <section id="region" class="panel">
+      <h2>Select State / Union Territory</h2>
+      <input id="regionSearch" placeholder="Search state or UT..." />
+      <div id="regionGrid" class="grid"></div>
+      <div class="nav-row">
+        <button id="backToGender" class="ghost">Back</button>
+      </div>
+    </section>
+
+    <!-- Outfit list -->
+    <section id="outfits" class="panel">
+      <h2>Choose an Outfit</h2>
+      <div id="outfitGrid" class="grid"></div>
+      <div class="nav-row">
+        <button id="backToRegion" class="ghost">Back</button>
+      </div>
+    </section>
+
+    <!-- 3D viewer -->
+    <section id="viewerPanel" class="viewer-panel">
+      <div id="viewerHud" class="hud">
+        <div id="hudTitle">Attirra</div>
+        <div id="hudDesc">Select an outfit to load it on the mannequin.</div>
+      </div>
+      <canvas id="c3d"></canvas>
+      <div class="viewer-controls">
+        <button id="tryAnother" class="ghost">Try Another Outfit</button>
+        <button id="changeRegionBtn" class="ghost">Change Region</button>
+        <button id="changeGenderBtn" class="ghost">Change Gender</button>
+      </div>
+      <div id="loading" class="loading hidden">Loading model…</div>
+    </section>
+  </main>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
